@@ -1,0 +1,933 @@
+{
+  "name": "linkedin job automation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1-5"
+            },
+            {
+              "field": "cronExpression",
+              "expression": "0 17 * * 1-5"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        756
+      ],
+      "id": "7b652116-ca2e-4637-9049-0ff3b2c7dc26",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = $input.first().json;\n\nconst urls = [\n  config.linkedinUrl,\n  config.cvUrl\n].filter(url => typeof url === \"string\" && url.trim().length > 0);\n\nreturn urls.map(url => ({json: {url: url.trim()}}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        756
+      ],
+      "id": "9a590134-16b7-4531-a1c6-7bebf167b547",
+      "name": "🧾 Build Profile Sources"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "eac9f5b1-716f-4af7-a924-64dcc6421fc7",
+              "name": "candidateName",
+              "value": "Shubham Yadav",
+              "type": "string"
+            },
+            {
+              "id": "1b56cb7b-01d0-4882-9544-f3382ccc1eb0",
+              "name": "candidateEmail",
+              "value": "shubhamyadav.70007@outlook.com",
+              "type": "string"
+            },
+            {
+              "id": "c216cbb8-4a9b-44dc-97da-223a35a04d41",
+              "name": "candidateMobile",
+              "value": "+91-9555444384",
+              "type": "string"
+            },
+            {
+              "id": "0dc318e8-c6c9-446d-9c3e-9cd70284371d",
+              "name": "linkedinUrl",
+              "value": "https://www.linkedin.com/in/coderoo7/",
+              "type": "string"
+            },
+            {
+              "id": "5a27e50e-8af4-4b5f-8ec2-f8e6d5caa8ed",
+              "name": "cvUrl",
+              "value": "https://gist.githubusercontent.com/CoderOO7/8984f7dab193142d0447fda67b843e17/raw/7fa81e0c60c91528c9a8f96a861b2426720bd0ec/Shubham_NodeJs_FullStack.md",
+              "type": "string"
+            },
+            {
+              "id": "9f9914ff-923c-4ff1-bbb4-d57e9044dc13",
+              "name": "targetLocation",
+              "value": "Bengaluru",
+              "type": "string"
+            },
+            {
+              "id": "bd5e83a7-4f04-4544-bc60-ee6b1c9c7388",
+              "name": "remotePreference",
+              "value": "hybrid",
+              "type": "string"
+            },
+            {
+              "id": "c55002d7-071e-4232-85ce-54a610c42b4f",
+              "name": "minimumSalaryAnnual",
+              "value": "2500000",
+              "type": "string"
+            },
+            {
+              "id": "58ac6db0-1857-4ea3-a361-eb80e94f148a",
+              "name": "maxJobsToProcess",
+              "value": 5,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        756
+      ],
+      "id": "2e34f494-258a-4abc-b9ef-9698f0581317",
+      "name": "⚙️ Configuration"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        672,
+        756
+      ],
+      "id": "957faad6-632d-4f4b-a616-0bcaa1c52670",
+      "name": "Loop Over Profile Sources"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "outputFormat": "markdown"
+        },
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.jinaAi",
+      "typeVersion": 1,
+      "position": [
+        896,
+        804
+      ],
+      "id": "b55e3da8-debe-4c50-af30-dd769de03c3b",
+      "name": "📖 Jina: Read Profile Source",
+      "credentials": {
+        "jinaAiApi": {
+          "id": "of2QDV8S7hhwVV3u",
+          "name": "Jina AI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "results",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        896,
+        612
+      ],
+      "id": "15542eb8-17dd-4fed-951b-aa6c95695d9f",
+      "name": "📦 Aggregate: Profile Sources"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Build a precise job search strategy from these profile sources.\n\nCandidate:\n- Name: {{ $('⚙️ Configuration').item.json.candidateName }}\n- Target location: {{ $('⚙️ Configuration').item.json.targetLocation }}\n- Remote preference: {{ $('⚙️ Configuration').item.json.remotePreference }}\n- Minimum annual salary: {{ $('⚙️ Configuration').item.json.minimumSalaryAnnual }}\n\nProfile Source Content:\n{{ JSON.stringify($json.results) }}\n\nFields to return:\n- primaryRoles: array of max 3 job titles\n- secondaryRoles: array of max 2 related roles\n- coreSkills: top 6 skills only\n- seniority: single string like \"Mid-level\" or \"Senior\"\n- expectedSalary: single string\n- searchQueries: exactly 3 job title keywords, no location, no city. Example: \"Full Stack Developer\", \"Backend Engineer\", \"Node.js Developer\"\n- exclusions: terms to avoid in job search\n- locationQuery: object with city and state fields\n- rationale: one sentence explanation",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a profile intelligence agent for job search automation. Infer realistic target roles and search queries from resume and LinkedIn profile content.\n\nRules:\n1. Keep searchQueries to exactly 3 items\n2. Search queries must be job title keywords only— no location, no city names, no remote or hybrid words\n3. Keep coreSkills to top 6 most relevant skills only\n4. Keep primaryRoles to max 3 items\n5. Keep secondaryRoles to max 2 items\n6. seniority must be a single string like \"Mid-level\", \"Senior\", \"Junior\"\n7. CRITICAL: Return pure JSON only — no markdown, no code fences, no backticks, no extra explanation. The output parser requires clean raw JSON. No additional fields simple one level plain object that can be used by parser.",
+          "maxIterations": 1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1176,
+        612
+      ],
+      "id": "ebd766fc-809a-41a9-824d-a566891f7be2",
+      "name": "🎯 Agent: Profile Generation",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "profile_intel_{{ $execution.id }}",
+        "contextWindowLength": 8
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1248,
+        836
+      ],
+      "id": "7c86f70c-d4a5-43cf-b370-b49c56b8a733",
+      "name": "💾 Memory: Profile Intelligence"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"required\": [\"primaryRoles\", \"secondaryRoles\", \"coreSkills\", \"seniority\", \"expectedSalary\", \"searchQueries\", \"exclusions\", \"locationQuery\", \"rationale\"],\n  \"properties\": {\n    \"primaryRoles\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n    \"secondaryRoles\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n    \"coreSkills\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n    \"seniority\": { \"type\": \"string\" },\n    \"expectedSalary\": { \"type\": \"string\" },\n    \"searchQueries\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n    \"exclusions\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n    \"locationQuery\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"city\": { \"type\": \"string\" },\n        \"state\": { \"type\": \"string\" }\n      }\n    },\n    \"rationale\": { \"type\": \"string\" }\n  }\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1376,
+        836
+      ],
+      "id": "ccfb1de5-1519-46c2-a22f-85ed132a5063",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-pro",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        836
+      ],
+      "id": "626e6d06-bc59-4c65-84e9-f90b7ae367ac",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "suvF6mPHR3Gn15QX",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// const output = $input.first().json.output;\n\n// // parse if it's a string\n// const parsed = typeof output === 'string' ? JSON.parse(output) : output;\n\n// const queries = parsed.searchQueries || [];\n// const location = parsed.locationQuery?.city || 'India';\n\n// return queries.map(query => ({\n//   json: {\n//     searchUrl: `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(query)}&location=${encodeURIComponent(location)}&f_TPR=r172800&f_LF=f_AL&sortBy=DD`,\n//     query\n//   }\n// }))\n\nconst output = $input.first().json.output;\nconst parsed = typeof output === \"string\" ? JSON.parse(output) : output;\n\nconst queries = parsed.searchQueries || [];\nconst location = parsed.locationQuery?.city\n  ? `${parsed.locationQuery.city}, ${parsed.locationQuery.state}, India`\n  : \"Bengaluru, Karnataka, India\";\n\nreturn queries.map((query) => {\n  // Strip location words and work-type words from keywords\n  const cleanQuery = query\n    .replace(/\"([^\"]+)\"/g, \"$1\") // remove quotes around phrases\n    .replace(/\\b(bengaluru|bangalore|india|hybrid|remote|onsite)\\b/gi, \"\")\n    .replace(/\\s+/g, \" \")\n    .trim();\n\n  // const searchUrl = `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(cleanQuery)}&location=${encodeURIComponent(location)}&f_TPR=r86400&f_E=4&f_LF=f_AL&sortBy=DD`;\n\n  // return { json: { searchUrl, query: cleanQuery } };\n  return {\n    json: {\n      title: cleanQuery,\n      location: location,\n      publishedAt: \"r86400\",\n      rows: 5,\n    },\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1584,
+        612
+      ],
+      "id": "ca047843-cfcb-4421-bc5e-61214ac95e7b",
+      "name": "🧾 Build Search URLs"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1808,
+        612
+      ],
+      "id": "f117076f-0843-4127-a894-8eefe3b7c6fa",
+      "name": "Loop Over Search URLs"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/bebity~linkedin-jobs-scraper/run-sync-get-dataset-items",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"contractType\": \"F\",\n    \"experienceLevel\": \"4\",\n    \"location\": \"{{ $json.location}}\",\n    \"proxy\": {\n        \"useApifyProxy\": true,\n        \"apifyProxyGroups\": [\n            \"RESIDENTIAL\"\n        ]\n    },\n    \"publishedAt\": \"{{ $json.publishedAt }}\",\n    \"rows\": {{ $json.rows }},\n    \"title\": \"{{ $json.title }}\",\n    \"workType\": \"3\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2032,
+        660
+      ],
+      "id": "41acbd15-0bee-48fe-8a4a-526e2e41dd5a",
+      "name": "🔍 Apify: Scrape LinkedIn",
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "TMvMW855tSGWeRzt",
+          "name": "Bearer Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "results",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2032,
+        468
+      ],
+      "id": "cddacf40-e960-479e-992a-1445c4d57060",
+      "name": "📦 Aggregate: Jobs"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1sx7VGjv70k5gx1VRBJTEbY1XKN34ypg0hB3j6ZaMrNA",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2256,
+        468
+      ],
+      "id": "6840d843-7412-4524-a927-719b1b973b74",
+      "name": "Get Already Processed Jobs",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "IAxbiZwFgoejkTAm",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const processedUrls = new Set(\n  $input.all().map(item => (item.json.URLS || '').trim().toLowerCase())\n);\n\nconst jobs = $('📦 Aggregate: Jobs').first().json.results || [];\n\nconst fresh = jobs.flat().filter(job => {\n  const url = (job.jobUrl || job.url || '').trim().toLowerCase();\n  return url && !processedUrls.has(url);\n});\n\nreturn fresh.map(job => ({ json: job }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2480,
+        468
+      ],
+      "id": "733f9aaf-9a2a-4605-b410-7c2e5a886a3d",
+      "name": "Remove Already Processed Jobs"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        2704,
+        468
+      ],
+      "id": "429cf93a-57ce-4bb1-aa75-900e16a9d0e5",
+      "name": "Loop Over Jobs"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Score this job against my profile.\n\nMY PROFILE:\nPrimary Roles: {{ $('🎯 Agent: Profile Generation').first().json.output.primaryRoles }}\nCore Skills: {{ $('🎯 Agent: Profile Generation').first().json.output.coreSkills }}\nSeniority: {{ $('🎯 Agent: Profile Generation').first().json.output.seniority }}\nExpected Salary: {{ $('🎯 Agent: Profile Generation').first().json.output.expectedSalary }}\nExclusions: {{ $('🎯 Agent: Profile Generation').first().json.output.exclusions }}\n\nJOB:\nTitle: {{ $json.title }}\nCompany: {{ $json.companyName }}\nLocation: {{ $json.location }}\nExperience Level: {{ $json.experienceLevel }}\nDescription: {{ $json.description.slice(0, 1000) }}\n\nReturn ONLY a raw JSON object like this:\n{\n  \"score\": 7,\n  \"reason\": \"Strong match because...\",\n  \"title\": \"{{ $json.title }}\",\n  \"companyName\": \"{{ $json.companyName }}\",\n  \"jobUrl\": \"{{ $json.jobUrl }}\",\n  \"description\": \"{{ $json.description.slice(0, 2000) }}\",\n  \"location\": \"{{ $json.location }}\"\n}\n\nScore rules:\n- 8-10: Skills match very well, right seniority level\n- 6-7: Decent match, transferable skills\n- Below 6: Poor match, missing key requirements\n\nNo markdown, no explanation outside the JSON.",
+        "options": {
+          "systemMessage": "You are a job relevance scorer. You compare a candidate's skills and experience against a job description and return a relevance score from 1 to 10.\n\nCRITICAL: Always return ONLY raw JSON with no markdown, no code fences, no backticks, no ```json. Return exactly in this format:\n\n{\"score\":7,\"reason\":\"your reason here\",\"title\":\"job title\",\"companyName\":\"company name\",\"jobUrl\":\"url here\",\"description\":\"job description here\",\"location\":\"city, country\"}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2928,
+        536
+      ],
+      "id": "2c0c8b5c-44bc-4958-919b-1ea899ef88f2",
+      "name": "🎯 Agent: Job Scoring",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        3000,
+        760
+      ],
+      "id": "39724b49-239f-4ed7-a45d-d9db87a975a7",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "suvF6mPHR3Gn15QX",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.output;\ntry {\n  const parsed = typeof raw === \"string\" ? JSON.parse(raw) : raw;\n  return [\n    {\n      json: {\n        skip: false,\n        score: parsed.score,\n        reason: parsed.reason,\n        title: parsed.title,\n        companyName: parsed.companyName,\n        jobUrl: parsed.jobUrl,\n        description: parsed.description,\n        location: parsed.location,\n      },\n    },\n  ];\n} catch (err) {\n  console.log(\"Unable to parse json\", err);\n  return [\n    {\n      json: {\n        skip: true,\n      },\n    },\n  ];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3280,
+        556
+      ],
+      "id": "c19b0411-5b34-4617-b4fa-89a4af61bd43",
+      "name": "🧾 Build Job Application Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3820c6b7-89df-439e-9522-a2a59e1ffe65",
+              "leftValue": "={{ $json.score }}",
+              "rightValue": 6,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            },
+            {
+              "id": "9a71a553-49f5-425b-903f-06f7ebdfde94",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        2992,
+        240
+      ],
+      "id": "59c5ec93-aaee-4131-ad57-59e30f35892a",
+      "name": "📦 Filtered: Job Applications"
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = $(\"⚙️ Configuration\").first().json;\nconst jobs = $input.first().json.data;\n\nreturn jobs.map((job) => {\n  const coldEmail = `Subject: Application for ${job.title} role\n\nHi Team,\n\nI came across the job posting for ${job.title} at ${job.companyName} and believe my background aligns well and  I'm confident that I can contribute effectively to the team.\n\nI have attached my resume for your review and look forward to hearing from you.\n\nThanks,\n${config.candidateName}\n${config.candidateMobile}`;\n\n  return  {\n    ...job,\n    coldEmail: coldEmail,\n    dateApplied: new Date().toISOString().split(\"T\")[0],\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3504,
+        240
+      ],
+      "id": "06a84bf3-b31d-4ea3-bc69-c04c71d04a2c",
+      "name": "Build Cold Email"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1sx7VGjv70k5gx1VRBJTEbY1XKN34ypg0hB3j6ZaMrNA",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sx7VGjv70k5gx1VRBJTEbY1XKN34ypg0hB3j6ZaMrNA/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "URLS": "={{ $json.jobUrl }}",
+            "Job Title": "={{ $json.title }}",
+            "Company": "={{ $json.companyName }}",
+            "Cold Email": "={{ $json.coldEmail }}",
+            "Date": "={{ $json.dateApplied }}",
+            "Job Match Reason": "={{ $json.reason }}",
+            "Job Score": "={{$json.score}}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Job Score",
+              "displayName": "Job Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Job Title",
+              "displayName": "Job Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "URLS",
+              "displayName": "URLS",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Cold Email",
+              "displayName": "Cold Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Job Match Reason",
+              "displayName": "Job Match Reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3728,
+        336
+      ],
+      "id": "d50144e2-2a91-46eb-8788-16fff5834c7e",
+      "name": "Add Job Applications To Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "IAxbiZwFgoejkTAm",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('⚙️ Configuration').item.json.candidateEmail }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        3952,
+        144
+      ],
+      "id": "72ac791e-e534-4f96-ae11-8bb22bbfe560",
+      "name": "📧 Send: Daily Summary",
+      "webhookId": "d6fef9f6-2e87-4ca3-8a10-562c15416925",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Ua9lEeSjOnboOPWg",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nif (items.length === 0) {\n  return [{\n    json: {\n      subject: `LinkedIn Job Agent — No matches today`,\n      body: `<p>No matching jobs found today. Will try again tomorrow.</p>`\n    }\n  }];\n}\nconst jobCards = items.map((item, i) => `\n  <div style=\"margin-bottom:30px;padding:20px;border:1px solid #e0e0e0;border-radius:8px;\">\n    <h2 style=\"margin:0 0 4px;\">${i + 1}. ${item.json.title}</h2>\n    <p style=\"margin:0 0 8px;color:#666;\">${item.json.companyName} — <a href=\"${item.json.jobUrl}\">${item.json.jobUrl}</a></p>\n    <h3 style=\"margin:12px 0 6px;\">Cold Email</h3>\n    <pre style=\"background:#f5f5f5;padding:12px;border-radius:6px;white-space:pre-wrap;font-size:13px;\">${item.json.coldEmail}</pre>\n  </div>\n`).join('');\n\nconst body = `\n<div style=\"font-family:Arial,sans-serif;max-width:700px;margin:auto;\">\n  <h1 style=\"color:#0a66c2;\">LinkedIn Job Agent — ${items.length} match${items.length > 1 ? 'es' : ''} today</h1>\n  <p>Here are today's matched jobs with cold emails ready to send:</p>\n  ${jobCards}\n  <hr>\n  <p style=\"color:#999;font-size:12px;\">Generated by your LinkedIn AI Agent • ${new Date().toDateString()}</p>\n</div>\n`;\n\nreturn [{\n  json: {\n    subject: `LinkedIn Job Agent — ${items.length} match${items.length > 1 ? 'es' : ''} found`,\n    body\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3728,
+        144
+      ],
+      "id": "bc7bc458-3e23-44a8-a0a4-8cd4ab7707b3",
+      "name": "🧾 Build Email Summary"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        3280,
+        240
+      ],
+      "id": "e1a76810-54a3-4b7d-b27b-244f5994b071",
+      "name": "📦 Aggregate Job Applications"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚙️ Configuration": {
+      "main": [
+        [
+          {
+            "node": "🧾 Build Profile Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧾 Build Profile Sources": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Profile Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Profile Sources": {
+      "main": [
+        [
+          {
+            "node": "📦 Aggregate: Profile Sources",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📖 Jina: Read Profile Source",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📖 Jina: Read Profile Source": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Profile Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 Aggregate: Profile Sources": {
+      "main": [
+        [
+          {
+            "node": "🎯 Agent: Profile Generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 Memory: Profile Intelligence": {
+      "ai_memory": [
+        [
+          {
+            "node": "🎯 Agent: Profile Generation",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "🎯 Agent: Profile Generation",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "🎯 Agent: Profile Generation",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎯 Agent: Profile Generation": {
+      "main": [
+        [
+          {
+            "node": "🧾 Build Search URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧾 Build Search URLs": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Search URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Search URLs": {
+      "main": [
+        [
+          {
+            "node": "📦 Aggregate: Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔍 Apify: Scrape LinkedIn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Apify: Scrape LinkedIn": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Search URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 Aggregate: Jobs": {
+      "main": [
+        [
+          {
+            "node": "Get Already Processed Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Already Processed Jobs": {
+      "main": [
+        [
+          {
+            "node": "Remove Already Processed Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Already Processed Jobs": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Jobs": {
+      "main": [
+        [
+          {
+            "node": "📦 Filtered: Job Applications",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🎯 Agent: Job Scoring",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎯 Agent: Job Scoring": {
+      "main": [
+        [
+          {
+            "node": "🧾 Build Job Application Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "🎯 Agent: Job Scoring",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧾 Build Job Application Data": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 Filtered: Job Applications": {
+      "main": [
+        [
+          {
+            "node": "📦 Aggregate Job Applications",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Cold Email": {
+      "main": [
+        [
+          {
+            "node": "Add Job Applications To Sheet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "🧾 Build Email Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧾 Build Email Summary": {
+      "main": [
+        [
+          {
+            "node": "📧 Send: Daily Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 Aggregate Job Applications": {
+      "main": [
+        [
+          {
+            "node": "Build Cold Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "2529950f-e6be-4a6b-93bb-fd06a5f61e85",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "30a7aa4d340003f27822fd7a79354b0aec6a025ad416ca96500661a8eb2edcf1"
+  },
+  "id": "fsmNnv7vqoLr9oTc",
+  "tags": []
+}
