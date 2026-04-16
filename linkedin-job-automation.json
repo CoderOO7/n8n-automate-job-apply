@@ -1,5 +1,5 @@
 {
-  "name": "linkedin job automation",
+  "name": "linkedin-job-automation",
   "nodes": [
     {
       "parameters": {
@@ -329,7 +329,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const processedUrls = new Set(\n  $input.all().map(item => (item.json.URLS || '').trim().toLowerCase())\n);\n\nconst jobs = $('📦 Aggregate: Jobs').first().json.results || [];\n\nconst fresh = jobs.flat().filter(job => {\n  const url = (job.jobUrl || job.url || '').trim().toLowerCase();\n  return url && !processedUrls.has(url);\n});\n\nreturn fresh.map(job => ({ json: job }));"
+        "jsCode": "const processedUrls = new Set(\n  $input.all().map(item => (item.json.URLS || '').trim().toLowerCase())\n);\n\nconst jobs = $('📦 Aggregate: Jobs').first().json.results || [];\n\nconst fresh = jobs.flat().filter(job => {\n  const url = (job.jobUrl || job.url || '').trim().toLowerCase();\n  return url && !processedUrls.has(url);\n});\n\nreturn fresh.map((job,i) => ({ json: job, pairedItem: i }));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -923,7 +923,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "2529950f-e6be-4a6b-93bb-fd06a5f61e85",
+  "versionId": "4a6eab1c-b9cf-43f5-808e-0e2a828c5e18",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "30a7aa4d340003f27822fd7a79354b0aec6a025ad416ca96500661a8eb2edcf1"
