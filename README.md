@@ -2,7 +2,9 @@
 
 Autonomous AI agent that scrapes LinkedIn for fresh job postings, scores them against your profile using an ATS + recruiter-style rubric, persists results in Postgres, and delivers matched jobs with ready-to-send cold emails to your Google Sheet and inbox.
 
-<img width="1763" height="476" alt="image" src="https://github.com/user-attachments/assets/0fbdbbf8-e8d6-46c3-b14b-624a887d7729" />
+## 🎬 Demo
+
+https://github.com/user-attachments/assets/4cc810b8-9a22-422c-83ee-a6af09c64efa
 
 ## 🎯 Features
 
@@ -148,9 +150,14 @@ Filter (skip=false AND score≥55) → Build Cold Email
 
 ### Scoring Rubric
 
+**Skill Lookup** — agent uses `candidate.allSkills` (full inventory, 15-25 items) as ground truth, with synonym map (e.g. `CI/CD` ↔ Harness/Jenkins/GH Actions, `Testing` ↔ Jest/Junit/Mockito). Prevents false "lacks X" deductions.
+
 **Stage 1 — Hard Gates** (any fail → SKIP, score capped 0-40):
-- `mustHaveSkillsGate` — ≥60% of must-haves present in JD
-- `seniorityGate` — candidate YoE within `[required-2, required+4]` (under by ≥3 fail; over by ≥5 fail / overqualified)
+- `mustHaveSkillsGate` — JD must-haves coverage in `candidate.allSkills` ≥60%
+- `seniorityGate` — **tiered by JD required years** (mirrors real ATS: senior bands less forgiving):
+  - JD ≤2y: under by ≥2 fail, over by ≥4 fail
+  - JD 3-5y: under by ≥2 fail, over by ≥5 fail
+  - JD ≥6y: under by ≥1.5 fail, over by ≥6 fail
 - `locationGate` — same city OR remote OR aligned with `remotePreference`
 - `exclusionGate` — no exclusion term in JD title
 
@@ -158,19 +165,24 @@ Filter (skip=false AND score≥55) → Build Cold Email
 - `titleMatch` (20)
 - `mustHaveSkillsMatch` (30)
 - `niceToHaveSkillsMatch` (10)
-- `seniorityMatch` (20) — asymmetric: within ±1 → 20, under by 2 → 13, over by 2 → 8, over by 3-4 → 4
+- `seniorityMatch` (20) — **tiered, asymmetric**:
+  - Senior band (JD ≥6y): delta ∈ [-1,+2] → 20; [-1.5,-1) → 10; (+2,+4] → 8; else → 0
+  - Entry/Mid (JD ≤5y): within ±1 → 20; under 2 → 13; over 2 → 8; over 3-4 → 4
 - `locationMatch` (10)
 - `recencyMatch` (10) — must-have skills used in last 2 yrs
 
-**Stage 3 — Red-Flag Deductions** (floor 0):
+**Stage 3 — Red-Flag Deductions** (floor 0, strict — no invented penalties):
 - mustHave skill fully missing → -15
 - job-hopper screen + avg tenure <12mo → -8
 - onsite required, candidate remote-only → -10
 
-**Recommendation**:
+**Recommendation** (with hard caps):
 - All gates pass + score ≥75 → `APPLY`
 - All gates pass + 55-74 → `REVIEW`
 - Otherwise → `SKIP`
+- **Hard caps** (override base):
+  - `seniorityMatch` == 0 → `SKIP`
+  - `seniorityMatch` ≤10 → max `REVIEW` (never `APPLY`, even if score ≥75)
 
 ### Key Nodes
 
